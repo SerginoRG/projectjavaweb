@@ -1,0 +1,17 @@
+{
+  "name": "avance",
+  "version": "1.0.0",
+  "description": "Gestion Touristique - Spring Boot Application",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/main/css/input.css -o ./src/main/resources/static/css/style.css",
+    "watch:css": "tailwindcss -i ./src/main/css/input.css -o ./src/main/resources/static/css/style.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.31",
+    "autoprefixer": "^10.4.16"
+  }
+}

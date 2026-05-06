@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Touristique</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex">
+
+    <!-- Sidebar à gauche -->
+    <aside th:replace="~{fragments/nav :: navbar}"></aside>
+
+    <!-- Zone de contenu principal -->
+    <!-- ml-64 est crucial car il décale le contenu de la largeur de la sidebar (256px) -->
+    <main class="flex-1 ml-64 p-8">
+        
+        <!-- En-tête avec ombre légère -->
+        <header class="mb-8 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Bonjour, <span class="text-red-500">Admin</span></h1>
+                <p class="text-gray-500 mt-1">Voici le statut actuel de vos sites touristiques.</p>
+            </div>
+            
+            <!-- Petit badge de statut (optionnel) -->
+            <span class="flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-medium">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Système en ligne
+            </span>
+        </header>
+
+        <!-- Contenu de test -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-gray-400 font-medium text-sm">Total Visites</h3>
+                <p class="text-2xl font-bold text-gray-800 mt-2">1,284</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-gray-400 font-medium text-sm">Sites Actifs</h3>
+                <p class="text-2xl font-bold text-gray-800 mt-2">12</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-gray-400 font-medium text-sm">Nouveaux Inscrits</h3>
+                <p class="text-2xl font-bold text-gray-800 mt-2">+48</p>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+</html>
