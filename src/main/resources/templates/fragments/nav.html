@@ -14,21 +14,65 @@
     </nav>
 
     <div class="p-4 mt-auto border-t border-gray-50">
-        <form th:action="@{/logout}"
-            method="post"
-            onsubmit="return confirmLogout()">
+    <!-- Formulaire sans le onsubmit natif -->
+    <form id="logoutForm" th:action="@{/logout}" method="post">
+        <button type="button" onclick="openLogoutModal()"
+                class="w-full text-left px-4 py-3 text-gray-500 hover:text-red-500 font-medium flex items-center gap-2">
+            <span>Déconnexion</span>
+        </button>
+    </form>
+</div>
 
-            <button type="submit"
-                    class="w-full text-left px-4 py-3 text-gray-500 hover:text-red-500 font-medium flex items-center gap-2">
-                <span>Déconnexion</span>
+<!-- MODAL DE CONFIRMATION PERSONNALISÉE -->
+<div id="logoutModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl border-t-4 border-red-500">
+        <!-- Titre avec couleur -->
+        <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <span class="text-red-500">⚠️</span> Attention
+        </h3>
+        
+        <!-- Message -->
+        <p class="text-gray-600 mb-6">Voulez-vous vraiment vous déconnecter ?</p>
+        
+        <!-- Boutons d'action -->
+        <div class="flex justify-end gap-3">
+            <button type="button" onclick="closeLogoutModal()"
+                    class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md font-medium transition-colors">
+                Non
             </button>
-        </form>
+            <button type="button" onclick="submitLogoutForm()"
+                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md font-medium transition-colors">
+                Oui
+            </button>
+        </div>
     </div>
+</div>
 
-    <script>
-        function confirmLogout() {
-            return confirm("Voulez-vous vraiment vous déconnecter ?");
+<script>
+    const modal = document.getElementById('logoutModal');
+    const form = document.getElementById('logoutForm');
+
+    function openLogoutModal() {
+        // Affiche la modal en retirant la classe 'hidden'
+        modal.classList.remove('hidden');
+    }
+
+    function closeLogoutModal() {
+        // Cache la modal en rajoutant la classe 'hidden'
+        modal.classList.add('hidden');
+    }
+
+    function submitLogoutForm() {
+        // Soumet le formulaire si l'utilisateur valide
+        form.submit();
+    }
+
+    // Optionnel : Fermer la modal si on clique à l'extérieur
+    window.onclick = function(event) {
+        if (event.target === modal) {
+            closeLogoutModal();
         }
-    </script>
+    }
+</script>
 
 </aside>

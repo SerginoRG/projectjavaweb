@@ -3,10 +3,12 @@ package com.projet.avance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletResponse;
 
 import com.projet.avance.model.User;
 import com.projet.avance.repository.UserRepository;
@@ -34,12 +36,36 @@ public class AvanceController {
     }
 
     @GetMapping("/home")
-    public String home() {
+    public String home(HttpSession session, Model model, HttpServletResponse response) {
+        // Empêcher la mise en cache
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Expires", "0");
+        
+        // Vérifier si connecté
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/";
+        }
+        
+        model.addAttribute("user", user);
         return "page/home";
     }
 
     @GetMapping("/page1")
-    public String page1(){
+    public String page1(HttpSession session, Model model, HttpServletResponse response){
+        // Empêcher la mise en cache
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Expires", "0");
+        
+        // Vérifier si connecté
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/";
+        }
+        
+        model.addAttribute("user", user);
         return "page/pageone";
     }
 
