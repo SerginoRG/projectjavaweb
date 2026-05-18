@@ -14,10 +14,21 @@
     </nav>
 
     <div class="p-4 mt-auto border-t border-gray-50">
-      <form th:action="@{/logout}" method="post">
-            <button type="submit" class="w-full text-left px-4 py-3 text-gray-500 hover:text-red-500 font-medium flex items-center gap-2">
+        <form th:action="@{/logout}"
+            method="post"
+            onsubmit="return confirmLogout()">
+
+            <button type="submit"
+                    class="w-full text-left px-4 py-3 text-gray-500 hover:text-red-500 font-medium flex items-center gap-2">
                 <span>Déconnexion</span>
             </button>
         </form>
     </div>
+
+    <script>
+        function confirmLogout() {
+            return confirm("Voulez-vous vraiment vous déconnecter ?");
+        }
+    </script>
+
 </aside>

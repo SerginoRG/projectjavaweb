@@ -49,8 +49,15 @@ public class AvanceController {
     @PostMapping("/signup")
     public String signup(@ModelAttribute User user, RedirectAttributes redirectAttributes) {
 
+        // Vérification mot de passe
         if (!user.getPassword().equals(user.getConfirmPassword())) {
             redirectAttributes.addFlashAttribute("error", "Les mots de passe ne correspondent pas");
+            return "redirect:/signin";
+        }
+
+        // Vérification email déjà utilisé
+        if (userRepository.existsByEmail(user.getEmail())) {
+            redirectAttributes.addFlashAttribute("error", "Email déjà utilisé");
             return "redirect:/signin";
         }
 
@@ -61,6 +68,39 @@ public class AvanceController {
 
         redirectAttributes.addFlashAttribute("success", "Compte créé avec succès !");
         return "redirect:/signin";
+    }
+
+
+    @PostMapping("/login")
+    public String doLogin(
+            @RequestParam String email,
+            @RequestParam String password,
+            RedirectAttributes redirectAttributes,
+            HttpSession session) {
+
+        // Vérifier si email existe
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user == null) {
+            redirectAttributes.addFlashAttribute(
+                    "emailError",
+                    "Email introuvable");
+            return "redirect:/";
+        }
+
+        // Vérifier mot de passe
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            redirectAttributes.addFlashAttribute(
+                    "passwordError",
+                    "Mot de passe incorrect");
+            return "redirect:/";
+        }
+
+        // Sauvegarder utilisateur en session
+        session.setAttribute("user", user);
+
+        // Redirection vers home
+        return "redirect:/home";
     }
 
 
