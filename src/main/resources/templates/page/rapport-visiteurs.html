@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport des Visiteurs par Site</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #1a1a2e;
+            --accent: #e63946;
+            --gold: #f4a261;
+            --light: #f8f9fa;
+            --border: #e2e8f0;
+            --text: #2d3748;
+            --muted: #718096;
+        }
+
+        body { font-family: 'DM Sans', sans-serif; }
+        h1, h2, h3, .font-display { font-family: 'Playfair Display', serif; }
+
+        /* ---- Filtre onglets ---- */
+        .tab-btn {
+            padding: 8px 20px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all .2s;
+            background: #e2e8f0;
+            color: var(--muted);
+        }
+        .tab-btn.active {
+            background: white;
+            color: var(--accent);
+            border-color: var(--border);
+            border-bottom-color: white;
+            margin-bottom: -2px;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* ---- Tableau rapport ---- */
+        #rapportTable thead tr {
+            background: var(--primary);
+            color: white;
+        }
+        #rapportTable thead th {
+            padding: 14px 20px;
+            text-align: left;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            font-size: 0.78rem;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+        #rapportTable tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background .15s;
+        }
+        #rapportTable tbody tr:hover { background: #fef9f9; }
+        #rapportTable tbody td {
+            padding: 13px 20px;
+            font-size: 0.92rem;
+            color: var(--text);
+        }
+
+        /* ---- Ligne total ---- */
+        .total-row {
+            background: linear-gradient(90deg, var(--primary) 0%, #16213e 100%) !important;
+            color: white !important;
+        }
+        .total-row td {
+            color: white !important;
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+            padding: 16px 20px !important;
+        }
+
+        /* ---- Badge montant ---- */
+        .badge-montant {
+            background: #fff3f3;
+            color: var(--accent);
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+        .badge-total {
+            background: var(--gold);
+            color: white;
+            padding: 3px 14px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        /* ---- Print styles ---- */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            main { margin-left: 0 !important; }
+            .print-shadow { box-shadow: none !important; border: 1px solid #ccc !important; }
+        }
+
+        /* ---- Animations ---- */
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .anim-in { animation: fadeSlideIn .35s ease both; }
+
+        /* ---- Ornement décoratif ---- */
+        .ornement {
+            display: inline-block;
+            width: 36px; height: 3px;
+            background: var(--accent);
+            border-radius: 2px;
+            vertical-align: middle;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex">
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/nav :: navbar}"></aside>
+
+    <!-- Contenu principal -->
+    <main class="flex-1 ml-64 p-8">
+
+        <!-- ===== EN-TÊTE ===== -->
+        <header class="mb-8 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden no-print">
+            <div class="flex items-center justify-between p-6">
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-gray-400 mb-1">Rapport</p>
+                    <h1 class="font-display text-3xl font-black text-gray-900">
+                        Liste des <span class="text-red-500">Visiteurs</span>
+                    </h1>
+                    <p class="text-gray-500 mt-1 text-sm">Consultez les visiteurs d'un site selon une période choisie.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="imprimerRapport()"
+                            class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium text-sm transition shadow">
+                        🖨️ Imprimer
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===== PANNEAU DE FILTRES ===== -->
+        <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8 no-print">
+            <h2 class="font-display text-lg font-bold text-gray-800 mb-5">Paramètres du rapport</h2>
+
+            <!-- Sélection du site -->
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Site touristique *</label>
+                <select id="selectSite"
+                        class="w-full md:w-96 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 transition text-gray-800 bg-white">
+                    <option value="">-- Choisir un site --</option>
+                </select>
+            </div>
+
+            <!-- Onglets de période -->
+            <div class="mb-0">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">Période</label>
+                <div class="flex gap-1 mb-0">
+                    <button class="tab-btn active" onclick="switchTab('annee')">Par Année</button>
+                    <button class="tab-btn" onclick="switchTab('mois')">Par Mois</button>
+                    <button class="tab-btn" onclick="switchTab('dates')">Entre 2 Dates</button>
+                </div>
+
+                <!-- Contenu onglets -->
+                <div class="border-2 border-gray-200 rounded-b-xl rounded-tr-xl p-5 bg-white">
+
+                    <!-- Onglet ANNEE -->
+                    <div id="tab-annee" class="tab-content flex items-end gap-4 flex-wrap">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Année</label>
+                            <select id="filtreAnnee"
+                                    class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 transition w-36">
+                            </select>
+                        </div>
+                        <button onclick="genererRapport()"
+                                class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold text-sm transition shadow">
+                            Générer le rapport
+                        </button>
+                    </div>
+
+                    <!-- Onglet MOIS -->
+                    <div id="tab-mois" class="tab-content hidden flex items-end gap-4 flex-wrap">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Année</label>
+                            <select id="filtreAnnee2"
+                                    class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 transition w-36">
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Mois</label>
+                            <select id="filtreMois"
+                                    class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 transition w-44">
+                                <option value="1">Janvier</option>
+                                <option value="2">Février</option>
+                                <option value="3">Mars</option>
+                                <option value="4">Avril</option>
+                                <option value="5">Mai</option>
+                                <option value="6">Juin</option>
+                                <option value="7">Juillet</option>
+                                <option value="8">Août</option>
+                                <option value="9">Septembre</option>
+                                <option value="10">Octobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Décembre</option>
+                            </select>
+                        </div>
+                        <button onclick="genererRapport()"
+                                class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold text-sm transition shadow">
+                            Générer le rapport
+                        </button>
+                    </div>
+
+                    <!-- Onglet ENTRE 2 DATES -->
+                    <div id="tab-dates" class="tab-content hidden flex items-end gap-4 flex-wrap">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Date début</label>
+                            <input type="date" id="dateDebut"
+                                   class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 transition w-44">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Date fin</label>
+                            <input type="date" id="dateFin"
+                                   class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-400 transition w-44">
+                        </div>
+                        <button onclick="genererRapport()"
+                                class="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold text-sm transition shadow">
+                            Générer le rapport
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== ZONE DE RÉSULTAT ===== -->
+        <section id="zoneResultat" class="hidden anim-in">
+
+            <!-- En-tête du rapport imprimable -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 print-shadow overflow-hidden">
+
+                <!-- Titre du rapport -->
+                <div class="bg-gradient-to-r from-gray-900 to-gray-800 px-8 py-6 text-white">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs uppercase tracking-[.2em] text-gray-400 mb-1">Rapport officiel</p>
+                            <h2 class="font-display text-2xl font-black">LISTE DES VISITEURS</h2>
+                            <div class="mt-3 flex flex-wrap gap-4 text-sm">
+                                <span class="flex items-center gap-1">
+                                    <span class="text-gray-400">Site :</span>
+                                    <span id="rapportSiteNom" class="font-bold text-yellow-300"></span>
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <span class="text-gray-400">Période :</span>
+                                    <span id="rapportPeriode" class="font-bold text-yellow-300"></span>
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <span class="text-gray-400">Tarif journalier :</span>
+                                    <span id="rapportTarif" class="font-bold text-yellow-300"></span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right no-print">
+                            <p class="text-xs text-gray-400">Généré le</p>
+                            <p id="dateGeneration" class="text-sm font-medium text-gray-200"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tableau des visiteurs -->
+                <div class="overflow-x-auto">
+                    <table id="rapportTable" class="w-full">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nom Visiteur</th>
+                                <th>Date de Visite</th>
+                                <th class="text-right">Tarif (Ar/j)</th>
+                                <th class="text-right">Nb Jours</th>
+                                <th class="text-right">Montant (Ar)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rapportTableBody">
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4"></td>
+                                <td class="text-right" style="font-size:0.8rem; letter-spacing:.08em; text-transform:uppercase; opacity:.8;">TOTAL</td>
+                                <td class="text-right">
+                                    <span class="badge-total" id="totalMontant">0 Ar</span>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Récapitulatif bas de page -->
+                <div class="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center flex-wrap gap-4">
+                    <div class="flex gap-6 text-sm text-gray-600">
+                        <span>Nombre de visiteurs : <strong id="nbVisiteurs" class="text-gray-900">0</strong></span>
+                        <span>Total jours : <strong id="totalJours" class="text-gray-900">0</strong></span>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400 uppercase tracking-wide">Montant total</p>
+                        <p class="font-display text-2xl font-black text-red-500" id="totalMontantBas">0 Ar</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- État vide / message -->
+        <div id="zoneVide" class="text-center py-20 text-gray-400">
+            <p class="text-lg font-medium">Sélectionnez un site et une période, puis cliquez sur <strong>Générer le rapport</strong>.</p>
+        </div>
+
+        <!-- Message aucun résultat -->
+        <div id="zoneAucun" class="hidden text-center py-20 text-gray-400">
+            <p class="text-5xl mb-4">🔍</p>
+            <p class="text-lg font-medium">Aucun visiteur trouvé pour cette sélection.</p>
+            <p class="text-sm mt-1">Essayez de modifier le site ou la période.</p>
+        </div>
+
+    </main>
+
+    <script>
+        // ======================== ÉTAT GLOBAL ========================
+        let activeTab   = 'annee';
+        let allVisites  = [];   // toutes les visites chargées
+        let allSites    = [];
+        let dataTable   = null;
+
+        // ======================== INIT ========================
+        document.addEventListener('DOMContentLoaded', () => {
+            populerAnnees();
+            chargerSites();
+            chargerVisites();
+
+            // Date d'aujourd'hui dans les champs date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateDebut').value = today;
+            document.getElementById('dateFin').value   = today;
+
+            // Mois courant par défaut
+            document.getElementById('filtreMois').value = new Date().getMonth() + 1;
+        });
+
+        // ======================== ONGLETS ========================
+        function switchTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+
+        // ======================== ANNÉES ========================
+        function populerAnnees() {
+            const anneeActuelle = new Date().getFullYear();
+            ['filtreAnnee', 'filtreAnnee2'].forEach(id => {
+                const sel = document.getElementById(id);
+                sel.innerHTML = '';
+                for (let a = anneeActuelle; a >= anneeActuelle - 10; a--) {
+                    const opt = document.createElement('option');
+                    opt.value = a;
+                    opt.textContent = a;
+                    sel.appendChild(opt);
+                }
+            });
+        }
+
+        // ======================== CHARGEMENT DONNÉES ========================
+        function chargerSites() {
+            fetch('/api/sites')
+                .then(r => r.json())
+                .then(data => {
+                    allSites = data;
+                    const sel = document.getElementById('selectSite');
+                    data.forEach(site => {
+                        const opt = document.createElement('option');
+                        opt.value   = site.siteId;
+                        opt.dataset.tarif = site.tarifJournalier;
+                        opt.dataset.nom   = site.nameSite;
+                        opt.textContent   = `${site.nameSite} — ${site.lieuSite}`;
+                        sel.appendChild(opt);
+                    });
+                })
+                .catch(err => console.error('Erreur chargement sites:', err));
+        }
+
+        function chargerVisites() {
+            fetch('/api/visites')
+                .then(r => r.json())
+                .then(data => { allVisites = data; })
+                .catch(err => console.error('Erreur chargement visites:', err));
+        }
+
+        // ======================== GÉNÉRATION RAPPORT ========================
+        function genererRapport() {
+            const siteId = document.getElementById('selectSite').value;
+            if (!siteId) {
+                alert('Veuillez sélectionner un site.');
+                return;
+            }
+
+            const siteOpt  = document.querySelector(`#selectSite option[value="${siteId}"]`);
+            const siteNom  = siteOpt.dataset.nom;
+            const tarif    = parseFloat(siteOpt.dataset.tarif) || 0;
+
+            // --- Filtrage par site ---
+            let visitesFiltrees = allVisites.filter(v => v.site && String(v.site.siteId) === String(siteId));
+
+            // --- Filtrage par période ---
+            let labelPeriode = '';
+
+            if (activeTab === 'annee') {
+                const annee = parseInt(document.getElementById('filtreAnnee').value);
+                visitesFiltrees = visitesFiltrees.filter(v => {
+                    const d = new Date(v.dateVisite);
+                    return d.getFullYear() === annee;
+                });
+                labelPeriode = `Année ${annee}`;
+
+            } else if (activeTab === 'mois') {
+                const annee = parseInt(document.getElementById('filtreAnnee2').value);
+                const mois  = parseInt(document.getElementById('filtreMois').value);
+                visitesFiltrees = visitesFiltrees.filter(v => {
+                    const d = new Date(v.dateVisite);
+                    return d.getFullYear() === annee && (d.getMonth() + 1) === mois;
+                });
+                const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                                  'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+                labelPeriode = `${nomsMois[mois]} ${annee}`;
+
+            } else if (activeTab === 'dates') {
+                const debut = document.getElementById('dateDebut').value;
+                const fin   = document.getElementById('dateFin').value;
+                if (!debut || !fin) { alert('Veuillez saisir les deux dates.'); return; }
+                if (debut > fin)    { alert('La date de début doit être avant la date de fin.'); return; }
+                visitesFiltrees = visitesFiltrees.filter(v => {
+                    return v.dateVisite >= debut && v.dateVisite <= fin;
+                });
+                labelPeriode = `Du ${formatDate(debut)} au ${formatDate(fin)}`;
+            }
+
+            afficherRapport(visitesFiltrees, siteNom, tarif, labelPeriode);
+        }
+
+        // ======================== AFFICHAGE ========================
+        function afficherRapport(visites, siteNom, tarif, labelPeriode) {
+            document.getElementById('zoneVide').classList.add('hidden');
+
+            if (visites.length === 0) {
+                document.getElementById('zoneResultat').classList.add('hidden');
+                document.getElementById('zoneAucun').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('zoneAucun').classList.add('hidden');
+            document.getElementById('zoneResultat').classList.remove('hidden');
+            document.getElementById('zoneResultat').classList.add('anim-in');
+
+            // Infos en-tête rapport
+            document.getElementById('rapportSiteNom').textContent = siteNom;
+            document.getElementById('rapportPeriode').textContent  = labelPeriode;
+            document.getElementById('rapportTarif').textContent    = formatMontant(tarif) + ' Ar/jour';
+            document.getElementById('dateGeneration').textContent  = new Date().toLocaleDateString('fr-FR', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+
+            // Remplissage tableau
+            const tbody = document.getElementById('rapportTableBody');
+            tbody.innerHTML = '';
+
+            let totalMontant = 0;
+            let totalJours   = 0;
+
+            visites.forEach((v, idx) => {
+                const visiteurNom = v.visiteur ? v.visiteur.nameVisiteur : 'N/A';
+                const nbrJours    = v.nbrJours || 1;
+                const montant     = tarif * nbrJours;
+                totalMontant += montant;
+                totalJours   += nbrJours;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-gray-400 text-xs">${idx + 1}</td>
+                        <td class="font-semibold text-gray-800">${visiteurNom}</td>
+                        <td class="text-gray-600">${formatDate(v.dateVisite)}</td>
+                        <td class="text-right text-gray-700">${formatMontant(tarif)}</td>
+                        <td class="text-right font-medium text-gray-800">${nbrJours}</td>
+                        <td class="text-right">
+                            <span class="badge-montant">${formatMontant(montant)}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Totaux
+            const totalFmt = formatMontant(totalMontant) + ' Ar';
+            document.getElementById('totalMontant').textContent    = totalFmt;
+            document.getElementById('totalMontantBas').textContent = totalFmt;
+            document.getElementById('nbVisiteurs').textContent     = visites.length;
+            document.getElementById('totalJours').textContent      = totalJours;
+        }
+
+        // ======================== IMPRESSION ========================
+        function imprimerRapport() {
+            if (document.getElementById('zoneResultat').classList.contains('hidden')) {
+                alert('Générez d\'abord un rapport avant d\'imprimer.');
+                return;
+            }
+            window.print();
+        }
+
+        // ======================== UTILITAIRES ========================
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function formatMontant(n) {
+            return new Intl.NumberFormat('fr-FR').format(n);
+        }
+    </script>
+
+</body>
+</html>

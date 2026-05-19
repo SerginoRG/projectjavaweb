@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Visiteurs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex">
+
+    <!-- Sidebar à gauche -->
+    <aside th:replace="~{fragments/nav :: navbar}"></aside>
+
+    <!-- Zone de contenu principal -->
+    <main class="flex-1 ml-64 p-8">
+        
+        <!-- En-tête avec ombre légère -->
+        <header class="mb-8 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Gestion des <span class="text-red-500">Visiteurs</span></h1>
+                <p class="text-gray-500 mt-1">Gérez l'ensemble des visiteurs de vos sites touristiques.</p>
+            </div>
+            
+            <!-- Bouton Ajouter -->
+            <button onclick="openAddModal()" class="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
+                <span>+</span>
+                <span>Ajouter Visiteur</span>
+            </button>
+        </header>
+
+        <!-- Section du tableau -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <!-- Barre de recherche rapide -->
+            <div class="mb-6 flex gap-4">
+                <div class="flex-1">
+                    <input type="text" id="searchInput" placeholder="Rechercher par ID ou nom..." 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition">
+                </div>
+                <button onclick="filterTable()" class="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                    Rechercher
+                </button>
+            </div>
+
+            <!-- DataTable -->
+            <div class="overflow-x-auto">
+                <table id="visiteurTable" class="w-full">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Nom</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Adresse</th>
+                            <th class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="visiteurTableBody">
+                        <!-- Les données seront remplies par JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL AJOUTER VISITEUR -->
+    <div id="addModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl border-t-4 border-red-500">
+            <h3 class="text-lg font-bold text-gray-900 mb-6">Ajouter un Visiteur</h3>
+            
+            <form id="addForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                    <input type="text" id="addName" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
+                    <input type="text" id="addAddress" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition">
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeAddModal()"
+                            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition">
+                        Annuler
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition">
+                        Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL MODIFIER VISITEUR -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl border-t-4 border-blue-500">
+            <h3 class="text-lg font-bold text-gray-900 mb-6">Modifier Visiteur</h3>
+            
+            <form id="editForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom</label>
+                    <input type="text" id="editName" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
+                    <input type="text" id="editAddress" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeEditModal()"
+                            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition">
+                        Annuler
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition">
+                        Modifier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL SUPPRIMER VISITEUR -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl border-t-4 border-yellow-500">
+            <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span class="text-yellow-500">⚠️</span> Confirmation
+            </h3>
+            <p class="text-gray-600 mb-6">Êtes-vous sûr de vouloir supprimer ce visiteur ? Cette action est irréversible.</p>
+            <input type="hidden" id="deleteId">
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeDeleteModal()"
+                        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition">
+                    Non
+                </button>
+                <button type="button" onclick="confirmDelete()"
+                        class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition">
+                    Oui, Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variable globale pour l'instance DataTable
+        let dataTable = null;
+
+        // Initialiser le tableau au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVisiteurs();
+            setupEventListeners();
+        });
+
+        // ✅ CORRECTION PRINCIPALE : reloadTable détruit proprement et recharge
+        function reloadTable(visiteurs) {
+            // 1. Détruire l'instance DataTable sans toucher au DOM (sans paramètre true)
+            if (dataTable !== null) {
+                dataTable.destroy();
+                dataTable = null;
+            }
+
+            // 2. Vider manuellement le tbody
+            document.getElementById('visiteurTableBody').innerHTML = '';
+
+            // 3. Remplir avec les nouvelles données
+            displayVisiteurs(visiteurs);
+
+            // 4. Réinitialiser DataTable
+            initDataTable();
+        }
+
+        // Charger les visiteurs depuis le serveur
+        function loadVisiteurs() {
+            fetch('/api/visiteurs', {
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                reloadTable(data); // ✅ Utilise reloadTable au lieu de deux appels séparés
+            })
+            .catch(error => console.error('Erreur:', error));
+        }
+
+        // Afficher les visiteurs dans le tableau
+        function displayVisiteurs(visiteurs) {
+            const tbody = document.getElementById('visiteurTableBody');
+
+            visiteurs.forEach(visiteur => {
+                const row = `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 text-sm text-gray-800 font-medium">${visiteur.visiteurId}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">${visiteur.nameVisiteur}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">${visiteur.adresseVisiteur}</td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <button onclick="openEditModal(${visiteur.visiteurId}, '${visiteur.nameVisiteur}', '${visiteur.adresseVisiteur}')"
+                                        class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-sm font-medium transition">
+                                    Modifier
+                                </button>
+                                <button onclick="openDeleteModal(${visiteur.visiteurId})"
+                                        class="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded text-sm font-medium transition">
+                                    Supprimer
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Initialiser DataTable
+        function initDataTable() {
+            dataTable = $('#visiteurTable').DataTable({
+                paging: true,
+                pageLength: 10,
+                searching: false,
+                info: true,
+                ordering: true,
+                language: {
+                    paginate: {
+                        previous: "Précédent",
+                        next: "Suivant"
+                    },
+                    info: "Affichage _START_ à _END_ sur _TOTAL_ visiteurs"
+                },
+                columnDefs: [
+                    { orderable: true, targets: 0 },
+                    { orderable: true, targets: 1 },
+                    { orderable: false, targets: 3 }
+                ]
+            });
+        }
+
+        // Fonction de recherche/filtrage
+        function filterTable() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#visiteurTableBody tr');
+
+            rows.forEach(row => {
+                const id = row.cells[0].textContent.toLowerCase();
+                const name = row.cells[1].textContent.toLowerCase();
+
+                if (id.includes(searchValue) || name.includes(searchValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Permettre la recherche en temps réel
+        document.getElementById('searchInput').addEventListener('keyup', filterTable);
+
+        // Setup des événements des formulaires
+        function setupEventListeners() {
+            document.getElementById('addForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addVisiteur();
+            });
+
+            document.getElementById('editForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                updateVisiteur();
+            });
+        }
+
+        // AJOUTER VISITEUR
+        function openAddModal() {
+            document.getElementById('addModal').classList.remove('hidden');
+            document.getElementById('addForm').reset();
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+        }
+
+        function addVisiteur() {
+            const name = document.getElementById('addName').value;
+            const address = document.getElementById('addAddress').value;
+
+            fetch('/api/visiteurs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                },
+                body: JSON.stringify({
+                    nameVisiteur: name,
+                    adresseVisiteur: address
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                closeAddModal();
+                loadVisiteurs(); // ✅ Recharge et réinitialise le tableau automatiquement
+                showNotification('Visiteur ajouté avec succès!', 'success');
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de l\'ajout', 'error');
+            });
+        }
+
+        // MODIFIER VISITEUR
+        function openEditModal(id, name, address) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editAddress').value = address;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function updateVisiteur() {
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('editName').value;
+            const address = document.getElementById('editAddress').value;
+
+            fetch(`/api/visiteurs/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                },
+                body: JSON.stringify({
+                    nameVisiteur: name,
+                    adresseVisiteur: address
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                closeEditModal();
+                loadVisiteurs(); // ✅ Recharge et réinitialise le tableau automatiquement
+                showNotification('Visiteur modifié avec succès!', 'success');
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la modification', 'error');
+            });
+        }
+
+        // SUPPRIMER VISITEUR
+        function openDeleteModal(id) {
+            document.getElementById('deleteId').value = id;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function confirmDelete() {
+            const id = document.getElementById('deleteId').value;
+            
+            fetch(`/api/visiteurs/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                closeDeleteModal();
+                loadVisiteurs(); // ✅ Recharge et réinitialise le tableau automatiquement
+                showNotification('Visiteur supprimé avec succès!', 'success');
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la suppression', 'error');
+            });
+        }
+
+        // Notification simple
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = type === 'success' 
+                ? 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+                : 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Fermer les modals quand on clique à l'extérieur
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('addModal')) {
+                closeAddModal();
+            }
+            if (event.target === document.getElementById('editModal')) {
+                closeEditModal();
+            }
+            if (event.target === document.getElementById('deleteModal')) {
+                closeDeleteModal();
+            }
+        });
+    </script>
+
+</body>
+</html>

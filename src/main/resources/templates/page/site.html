@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Sites</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex">
+
+    <!-- Sidebar à gauche -->
+    <aside th:replace="~{fragments/nav :: navbar}"></aside>
+
+    <!-- Zone de contenu principal -->
+    <main class="flex-1 ml-64 p-8">
+        
+        <!-- En-tête avec ombre légère -->
+        <header class="mb-8 flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div>
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Gestion des <span class="text-blue-500">Sites</span></h1>
+                <p class="text-gray-500 mt-1">Gérez l'ensemble des sites touristiques à visiter.</p>
+            </div>
+            
+            <!-- Bouton Ajouter -->
+            <button id="addSiteBtn" class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg">
+                <span>+</span>
+                <span>Ajouter Site</span>
+            </button>
+        </header>
+
+        <!-- Section du tableau -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <!-- Barre de recherche rapide -->
+            <div class="mb-6 flex gap-4">
+                <div class="flex-1">
+                    <input type="text" id="searchInput" placeholder="Rechercher par nom..." 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                </div>
+                <button onclick="filterTable()" class="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition">
+                    Rechercher
+                </button>
+            </div>
+
+            <!-- DataTable -->
+            <div class="overflow-x-auto">
+                <table id="sitesTable" class="w-full">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 text-left text-gray-700 font-semibold border-b">ID</th>
+                            <th class="px-6 py-3 text-left text-gray-700 font-semibold border-b">Nom du Site</th>
+                            <th class="px-6 py-3 text-left text-gray-700 font-semibold border-b">Lieu</th>
+                            <th class="px-6 py-3 text-left text-gray-700 font-semibold border-b">Tarif Journalier</th>
+                            <th class="px-6 py-3 text-left text-gray-700 font-semibold border-b">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sitesTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL AJOUTER/MODIFIER SITE -->
+    <div id="siteModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl border-t-4 border-blue-500">
+            <h3 id="modalTitle" class="text-lg font-bold text-gray-900 mb-6">Ajouter un Site</h3>
+            
+            <form id="siteForm" class="space-y-4">
+                <input type="hidden" id="siteId">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom du Site *</label>
+                    <input type="text" id="nameSite" placeholder="Entrez le nom du site" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Lieu *</label>
+                    <input type="text" id="lieuSite" placeholder="Entrez le lieu" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tarif Journalier (MGA) *</label>
+                    <input type="number" id="tarifJournalier" placeholder="0.00" step="0.01" min="0" required
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeSiteModal()"
+                            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition">
+                        Annuler
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL SUPPRIMER SITE -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl border-t-4 border-yellow-500">
+            <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span class="text-yellow-500">⚠️</span> Confirmation
+            </h3>
+            <p class="text-gray-600 mb-6">Êtes-vous sûr de vouloir supprimer ce site ? Cette action est irréversible.</p>
+            <p id="deleteSiteName" class="text-gray-900 font-semibold mb-6"></p>
+            <input type="hidden" id="deleteId">
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeDeleteModal()"
+                        class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition">
+                    Non
+                </button>
+                <button type="button" onclick="confirmDelete()"
+                        class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition">
+                    Oui, Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variable globale pour l'instance DataTable
+        let dataTable = null;
+
+        // Initialiser le tableau au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSites();
+            setupEventListeners();
+        });
+
+        // ✅ CORRECTION PRINCIPALE : reloadTable détruit proprement et recharge
+        function reloadTable(sites) {
+            // 1. Détruire l'instance DataTable sans toucher au DOM (sans paramètre true)
+            if (dataTable !== null) {
+                dataTable.destroy();
+                dataTable = null;
+            }
+
+            // 2. Vider manuellement le tbody
+            document.getElementById('sitesTableBody').innerHTML = '';
+
+            // 3. Remplir avec les nouvelles données
+            displaySites(sites);
+
+            // 4. Réinitialiser DataTable
+            initDataTable();
+        }
+
+        // Charger les sites depuis le serveur
+        function loadSites() {
+            fetch('/api/sites', {
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                reloadTable(data); // ✅ Utilise reloadTable au lieu de deux appels séparés
+            })
+            .catch(error => console.error('Erreur:', error));
+        }
+
+        // Afficher les sites dans le tableau
+        function displaySites(sites) {
+            const tbody = document.getElementById('sitesTableBody');
+
+            sites.forEach(site => {
+                const tarif = new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'MGA'
+                }).format(site.tarifJournalier);
+                
+                const row = `
+                    <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
+                        <td class="px-6 py-3 text-gray-900">${site.siteId}</td>
+                        <td class="px-6 py-3 text-gray-900">${site.nameSite}</td>
+                        <td class="px-6 py-3 text-gray-900">${site.lieuSite}</td>
+                        <td class="px-6 py-3 text-gray-900">${tarif}</td>
+                        <td class="px-6 py-3">
+                            <div class="flex gap-2">
+                                <button onclick="editSite(${site.siteId})" 
+                                        class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded font-medium transition">
+                                    Modifier
+                                </button>
+                                <button onclick="openDeleteModal(${site.siteId}, '${site.nameSite}')" 
+                                        class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded font-medium transition">
+                                    Supprimer
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Initialiser DataTable
+        function initDataTable() {
+            dataTable = $('#sitesTable').DataTable({
+                paging: true,
+                pageLength: 10,
+                searching: false,
+                info: true,
+                ordering: true,
+                language: {
+                    paginate: {
+                        previous: "Précédent",
+                        next: "Suivant"
+                    },
+                    info: "Affichage _START_ à _END_ sur _TOTAL_ sites"
+                },
+                columnDefs: [
+                    { orderable: true, targets: 0 },
+                    { orderable: true, targets: 1 },
+                    { orderable: true, targets: 2 },
+                    { orderable: true, targets: 3 },
+                    { orderable: false, targets: 4 }
+                ]
+            });
+        }
+
+        // Fonction de recherche/filtrage
+        function filterTable() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#sitesTableBody tr');
+
+            rows.forEach(row => {
+                const name = row.cells[1].textContent.toLowerCase();
+
+                if (name.includes(searchValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Permettre la recherche en temps réel
+        document.getElementById('searchInput').addEventListener('keyup', filterTable);
+
+        // Setup des événements des formulaires
+        function setupEventListeners() {
+            document.getElementById('siteForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSite();
+            });
+        }
+
+        // AJOUTER SITE
+        document.getElementById('addSiteBtn').addEventListener('click', function() {
+            document.getElementById('modalTitle').textContent = 'Ajouter un Site';
+            document.getElementById('siteForm').reset();
+            document.getElementById('siteId').value = '';
+            document.getElementById('siteModal').classList.remove('hidden');
+        });
+
+        function closeSiteModal() {
+            document.getElementById('siteModal').classList.add('hidden');
+            document.getElementById('siteForm').reset();
+        }
+
+        // MODIFIER SITE
+        function editSite(siteId) {
+            fetch(`/api/sites/${siteId}`, {
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('modalTitle').textContent = 'Modifier le Site';
+                document.getElementById('siteId').value = data.siteId;
+                document.getElementById('nameSite').value = data.nameSite;
+                document.getElementById('lieuSite').value = data.lieuSite;
+                document.getElementById('tarifJournalier').value = data.tarifJournalier;
+                document.getElementById('siteModal').classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors du chargement du site', 'error');
+            });
+        }
+
+        // ENREGISTRER SITE (Ajout ou Modification)
+        function saveSite() {
+            const siteId = document.getElementById('siteId').value;
+            const siteData = {
+                nameSite: document.getElementById('nameSite').value,
+                lieuSite: document.getElementById('lieuSite').value,
+                tarifJournalier: parseFloat(document.getElementById('tarifJournalier').value)
+            };
+            
+            const url = siteId ? `/api/sites/${siteId}` : '/api/sites';
+            const method = siteId ? 'PUT' : 'POST';
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                },
+                body: JSON.stringify(siteData)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Erreur serveur');
+                return response.json();
+            })
+            .then(data => {
+                closeSiteModal();
+                showNotification(siteId ? 'Site modifié avec succès!' : 'Site ajouté avec succès!', 'success');
+                loadSites(); // ✅ Recharge et réinitialise le tableau automatiquement
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de l\'enregistrement', 'error');
+            });
+        }
+
+        // SUPPRIMER SITE
+        function openDeleteModal(siteId, siteName) {
+            document.getElementById('deleteId').value = siteId;
+            document.getElementById('deleteSiteName').textContent = `"${siteName}"`;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function confirmDelete() {
+            const siteId = document.getElementById('deleteId').value;
+            
+            fetch(`/api/sites/${siteId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Erreur serveur');
+                closeDeleteModal();
+                loadSites(); // ✅ Recharge et réinitialise le tableau automatiquement
+                showNotification('Site supprimé avec succès!', 'success');
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la suppression', 'error');
+            });
+        }
+
+        // Notification simple
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = type === 'success' 
+                ? 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+                : 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Fermer les modals quand on clique à l'extérieur
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('siteModal')) {
+                closeSiteModal();
+            }
+            if (event.target === document.getElementById('deleteModal')) {
+                closeDeleteModal();
+            }
+        });
+    </script>
+
+</body>
+</html>

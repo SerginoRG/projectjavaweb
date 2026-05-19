@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiques des Visites par Site</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary:   #0f172a;
+            --accent:    #6366f1;
+            --accent2:   #f59e0b;
+            --success:   #10b981;
+            --danger:    #ef4444;
+            --light:     #f8fafc;
+            --border:    #e2e8f0;
+            --text:      #1e293b;
+            --muted:     #64748b;
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: #f1f5f9; }
+        h1, h2, .font-display { font-family: 'Playfair Display', serif; }
+
+        /* ───── Sidebar placeholder ───── */
+        aside { min-width: 256px; }
+
+        /* ───── Onglets période ───── */
+        .tab-btn {
+            padding: 9px 22px;
+            border-radius: 10px 10px 0 0;
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all .2s;
+            background: #e2e8f0;
+            color: var(--muted);
+            letter-spacing: .02em;
+        }
+        .tab-btn.active {
+            background: white;
+            color: var(--accent);
+            border-color: var(--border);
+            border-bottom-color: white;
+            margin-bottom: -2px;
+            z-index: 2;
+            position: relative;
+        }
+        .tab-btn:not(.active):hover { background: #cbd5e1; color: var(--text); }
+
+        /* ───── Cartes KPI ───── */
+        .kpi-card {
+            background: white;
+            border-radius: 16px;
+            padding: 22px 24px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.08); }
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+        }
+        .kpi-card.indigo::before  { background: var(--accent); }
+        .kpi-card.amber::before   { background: var(--accent2); }
+        .kpi-card.emerald::before { background: var(--success); }
+        .kpi-value {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 900;
+            line-height: 1;
+            color: var(--text);
+        }
+        .kpi-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+        .kpi-icon {
+            font-size: 2rem;
+            opacity: .15;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* ───── DataTable custom ───── */
+        #statsTable_wrapper .dataTables_filter input {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            transition: border-color .2s;
+            outline: none;
+        }
+        #statsTable_wrapper .dataTables_filter input:focus { border-color: var(--accent); }
+        #statsTable_wrapper .dataTables_length select {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        #statsTable_wrapper .dataTables_info,
+        #statsTable_wrapper .dataTables_length label { font-size: 0.82rem; color: var(--muted); }
+        #statsTable_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 7px !important;
+            font-size: 0.82rem;
+            padding: 4px 10px !important;
+        }
+        #statsTable_wrapper .dataTables_paginate .paginate_button.current {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+            color: white !important;
+        }
+        #statsTable_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
+            background: #e0e7ff !important;
+            border-color: #e0e7ff !important;
+            color: var(--accent) !important;
+        }
+
+        #statsTable thead tr {
+            background: var(--primary);
+            color: white;
+        }
+        #statsTable thead th {
+            padding: 14px 18px !important;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: white !important;
+            border-bottom: none !important;
+        }
+        #statsTable thead th.sorting::after,
+        #statsTable thead th.sorting_asc::after,
+        #statsTable thead th.sorting_desc::after {
+            color: rgba(255,255,255,.5) !important;
+        }
+        #statsTable tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background .15s;
+        }
+        #statsTable tbody tr:hover { background: #f5f3ff; }
+        #statsTable tbody td {
+            padding: 13px 18px !important;
+            font-size: 0.9rem;
+            color: var(--text);
+            vertical-align: middle;
+        }
+        #statsTable tbody tr:nth-child(even) { background: #fafafa; }
+        #statsTable tbody tr:nth-child(even):hover { background: #f5f3ff; }
+
+        /* ───── Rang badge ───── */
+        .rang-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .rang-1 { background: #fef3c7; color: #d97706; }
+        .rang-2 { background: #f1f5f9; color: #475569; }
+        .rang-3 { background: #fff7ed; color: #c2410c; }
+        .rang-n { background: #f1f5f9; color: #94a3b8; }
+
+        /* ───── Effectif + barre ───── */
+        .effectif-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e7ff;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .effectif-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--accent), #818cf8);
+            transition: width .6s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* ───── Montant badge ───── */
+        .montant-badge {
+            display: inline-block;
+            background: #f0fdf4;
+            color: #059669;
+            border: 1px solid #d1fae5;
+            padding: 3px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .montant-top {
+            background: #fef9c3;
+            color: #b45309;
+            border-color: #fde68a;
+        }
+
+        /* ───── Ligne total tfoot ───── */
+        #statsTable tfoot tr {
+            background: var(--primary) !important;
+        }
+        #statsTable tfoot td {
+            padding: 14px 18px !important;
+            color: white !important;
+            font-weight: 700 !important;
+            font-size: 0.88rem !important;
+        }
+
+        /* ───── Animations ───── */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .anim-up { animation: fadeUp .4s ease both; }
+
+        /* ───── Print ───── */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            main { margin-left: 0 !important; padding: 20px !important; }
+            .kpi-card { box-shadow: none !important; }
+        }
+
+        /* ───── État vide ───── */
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-state .icon { font-size: 3.5rem; margin-bottom: 12px; opacity: .6; }
+    </style>
+</head>
+<body class="min-h-screen flex">
+
+    <!-- Sidebar -->
+    <aside th:replace="~{fragments/nav :: navbar}"></aside>
+
+    <!-- Contenu -->
+    <main class="flex-1 ml-64 p-8">
+
+        <!-- ══════════════════ EN-TÊTE ══════════════════ -->
+        <header class="mb-8 no-print">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex justify-between items-center">
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-indigo-400 font-semibold mb-1">Tableau de bord</p>
+                    <h1 class="font-display text-3xl font-black text-gray-900">
+                        Statistiques des <span class="text-indigo-500">Visites</span>
+                    </h1>
+                    <p class="text-gray-500 mt-1 text-sm">Effectif et montant total des visites par site.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="window.print()"
+                            class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-semibold text-sm transition shadow">
+                        🖨️ Imprimer
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ══════════════════ FILTRES ══════════════════ -->
+        <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8 no-print">
+            <h2 class="font-display text-base font-bold text-gray-800 mb-4">Filtrer par période</h2>
+
+            <!-- Onglets -->
+            <div class="flex gap-1 mb-0">
+                <button class="tab-btn active" id="btn-annee"  onclick="switchTab('annee', this)">Par Année</button>
+                <button class="tab-btn"        id="btn-mois"   onclick="switchTab('mois', this)">Par Mois</button>
+                <button class="tab-btn"        id="btn-dates"  onclick="switchTab('dates', this)">Entre 2 Dates</button>
+            </div>
+
+            <div class="border-2 border-gray-200 rounded-b-xl rounded-tr-xl p-5 bg-white">
+
+                <!-- Onglet Année -->
+                <div id="tab-annee" class="tab-content flex flex-wrap items-end gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Année</label>
+                        <select id="filtreAnnee"
+                                class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 transition w-36 text-gray-800">
+                        </select>
+                    </div>
+                    <button onclick="generer()"
+                            class="px-7 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-bold text-sm transition shadow-md shadow-indigo-100">
+                        Générer les statistiques
+                    </button>
+                </div>
+
+                <!-- Onglet Mois -->
+                <div id="tab-mois" class="tab-content hidden flex flex-wrap items-end gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Année</label>
+                        <select id="filtreAnnee2"
+                                class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 transition w-36 text-gray-800">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mois</label>
+                        <select id="filtreMois"
+                                class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 transition w-44 text-gray-800">
+                            <option value="1">Janvier</option><option value="2">Février</option>
+                            <option value="3">Mars</option><option value="4">Avril</option>
+                            <option value="5">Mai</option><option value="6">Juin</option>
+                            <option value="7">Juillet</option><option value="8">Août</option>
+                            <option value="9">Septembre</option><option value="10">Octobre</option>
+                            <option value="11">Novembre</option><option value="12">Décembre</option>
+                        </select>
+                    </div>
+                    <button onclick="generer()"
+                            class="px-7 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-bold text-sm transition shadow-md shadow-indigo-100">
+                        Générer les statistiques
+                    </button>
+                </div>
+
+                <!-- Onglet Entre 2 dates -->
+                <div id="tab-dates" class="tab-content hidden flex flex-wrap items-end gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Date début</label>
+                        <input type="date" id="dateDebut"
+                               class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 transition w-44 text-gray-800">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Date fin</label>
+                        <input type="date" id="dateFin"
+                               class="px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 transition w-44 text-gray-800">
+                    </div>
+                    <button onclick="generer()"
+                            class="px-7 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-bold text-sm transition shadow-md shadow-indigo-100">
+                        Générer les statistiques
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ══════════════════ ÉTAT INITIAL ══════════════════ -->
+        <div id="zoneVide" class="empty-state bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div class="icon">📊</div>
+            <p class="text-lg font-semibold text-gray-700">Aucun résultat à afficher</p>
+            <p class="text-sm mt-1">Choisissez une période et cliquez sur <strong>Générer les statistiques</strong>.</p>
+        </div>
+
+        <!-- ══════════════════ ZONE RÉSULTAT ══════════════════ -->
+        <div id="zoneResultat" class="hidden anim-up">
+
+            <!-- Bandeau titre période -->
+            <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <div>
+                    <h2 class="font-display text-xl font-black text-gray-900">
+                        Effectif et montant total des visites par site
+                    </h2>
+                    <p class="text-sm text-indigo-500 font-semibold mt-0.5" id="labelPeriode"></p>
+                </div>
+                <div class="text-xs text-gray-400 no-print">Généré le <span id="dateGen"></span></div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-3 gap-5 mb-7">
+                <div class="kpi-card indigo anim-up" style="animation-delay:.05s">
+                    <div class="kpi-icon">🏛️</div>
+                    <div class="kpi-value" id="kpiSites">0</div>
+                    <div class="kpi-label">Sites actifs</div>
+                </div>
+                <div class="kpi-card amber anim-up" style="animation-delay:.1s">
+                    <div class="kpi-icon">👥</div>
+                    <div class="kpi-value" id="kpiVisiteurs">0</div>
+                    <div class="kpi-label">Visiteurs total</div>
+                </div>
+                <div class="kpi-card emerald anim-up" style="animation-delay:.15s">
+                    <div class="kpi-icon">💰</div>
+                    <div class="kpi-value" id="kpiMontant">0</div>
+                    <div class="kpi-label">Montant total (Ar)</div>
+                </div>
+            </div>
+
+            <!-- DataTable -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden anim-up" style="animation-delay:.2s">
+
+                <!-- Titre tableau -->
+                <div class="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-800 text-sm uppercase tracking-wide">
+                        Détail par site
+                    </h3>
+                    <span class="text-xs text-gray-400">Triable · Paginé · Recherche intégrée</span>
+                </div>
+
+                <div class="p-6">
+                    <table id="statsTable" class="w-full rounded-xl overflow-hidden">
+                        <thead>
+                            <tr>
+                                <th style="width:50px">#</th>
+                                <th>Nom du Site</th>
+                                <th>Lieu</th>
+                                <th style="text-align:right">Tarif Journalier</th>
+                                <th style="text-align:right">Effectif (Visiteurs)</th>
+                                <th style="text-align:right">Total Jours</th>
+                                <th style="text-align:right">Montant Total (Ar)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody">
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" style="font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;opacity:.7"></td>
+                                <td style="text-align:right;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;opacity:.7">TOTAUX</td>
+                                <td style="text-align:right" id="tfEffectif">0</td>
+                                <td style="text-align:right" id="tfJours">0</td>
+                                <td style="text-align:right" id="tfMontant">0 Ar</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /zoneResultat -->
+
+    </main>
+
+    <script>
+    // ═══════════════════════════════════════════════════
+    //  ÉTAT GLOBAL
+    // ═══════════════════════════════════════════════════
+    let activeTab  = 'annee';
+    let allVisites = [];
+    let allSites   = [];
+    let dataTable  = null;
+
+    const MOIS_NOMS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                       'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+    // ═══════════════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+        remplirAnnees();
+        chargerDonnees();
+
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateDebut').value = today;
+        document.getElementById('dateFin').value   = today;
+        document.getElementById('filtreMois').value = new Date().getMonth() + 1;
+    });
+
+    // ═══════════════════════════════════════════════════
+    //  ONGLETS
+    // ═══════════════════════════════════════════════════
+    function switchTab(tab, btn) {
+        activeTab = tab;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.remove('hidden');
+        btn.classList.add('active');
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  ANNÉES (select)
+    // ═══════════════════════════════════════════════════
+    function remplirAnnees() {
+        const now = new Date().getFullYear();
+        ['filtreAnnee','filtreAnnee2'].forEach(id => {
+            const sel = document.getElementById(id);
+            sel.innerHTML = '';
+            for (let y = now; y >= now - 15; y--) {
+                const o = document.createElement('option');
+                o.value = y; o.textContent = y;
+                sel.appendChild(o);
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  CHARGEMENT DEPUIS L'API
+    // ═══════════════════════════════════════════════════
+    function chargerDonnees() {
+        Promise.all([
+            fetch('/api/sites').then(r => r.json()),
+            fetch('/api/visites').then(r => r.json())
+        ])
+        .then(([sites, visites]) => {
+            allSites   = sites;
+            allVisites = visites;
+        })
+        .catch(err => console.error('Erreur chargement:', err));
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  GÉNÉRATION DES STATISTIQUES
+    // ═══════════════════════════════════════════════════
+    function generer() {
+        // 1. Déterminer le filtre temporel
+        let visitesFiltrees = [...allVisites];
+        let labelPeriode    = '';
+
+        if (activeTab === 'annee') {
+            const annee = parseInt(document.getElementById('filtreAnnee').value);
+            visitesFiltrees = visitesFiltrees.filter(v => {
+                return v.dateVisite && new Date(v.dateVisite).getFullYear() === annee;
+            });
+            labelPeriode = `Année ${annee}`;
+
+        } else if (activeTab === 'mois') {
+            const annee = parseInt(document.getElementById('filtreAnnee2').value);
+            const mois  = parseInt(document.getElementById('filtreMois').value);
+            visitesFiltrees = visitesFiltrees.filter(v => {
+                if (!v.dateVisite) return false;
+                const d = new Date(v.dateVisite);
+                return d.getFullYear() === annee && (d.getMonth() + 1) === mois;
+            });
+            labelPeriode = `${MOIS_NOMS[mois]} ${annee}`;
+
+        } else {
+            const debut = document.getElementById('dateDebut').value;
+            const fin   = document.getElementById('dateFin').value;
+            if (!debut || !fin)  { alert('Veuillez saisir les deux dates.'); return; }
+            if (debut > fin)     { alert('La date de début doit être avant la date de fin.'); return; }
+            visitesFiltrees = visitesFiltrees.filter(v => {
+                return v.dateVisite && v.dateVisite >= debut && v.dateVisite <= fin;
+            });
+            labelPeriode = `Du ${fmtDate(debut)} au ${fmtDate(fin)}`;
+        }
+
+        // 2. Agréger par site
+        //    Map : siteId → { site, effectif, totalJours, montant }
+        const map = {};
+        allSites.forEach(s => {
+            map[s.siteId] = {
+                site      : s,
+                effectif  : 0,
+                totalJours: 0,
+                montant   : 0
+            };
+        });
+
+        visitesFiltrees.forEach(v => {
+            if (!v.site) return;
+            const id    = v.site.siteId;
+            if (!map[id]) return;
+            const tarif = v.site.tarifJournalier || 0;
+            const jours = v.nbrJours || 1;
+            map[id].effectif++;
+            map[id].totalJours += jours;
+            map[id].montant    += tarif * jours;
+        });
+
+        // 3. Construire le tableau de résultats (seulement les sites avec visites)
+        const rows = Object.values(map).filter(r => r.effectif > 0);
+
+        afficher(rows, labelPeriode);
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  AFFICHAGE
+    // ═══════════════════════════════════════════════════
+    function afficher(rows, labelPeriode) {
+        document.getElementById('zoneVide').classList.add('hidden');
+
+        if (rows.length === 0) {
+            document.getElementById('zoneResultat').classList.add('hidden');
+            document.getElementById('zoneVide').classList.remove('hidden');
+            document.querySelector('#zoneVide p.text-lg').textContent = 'Aucun visiteur trouvé pour cette période.';
+            return;
+        }
+
+        document.getElementById('zoneResultat').classList.remove('hidden');
+        document.getElementById('labelPeriode').textContent = labelPeriode;
+        document.getElementById('dateGen').textContent = new Date().toLocaleDateString('fr-FR', {
+            day:'2-digit', month:'long', year:'numeric'
+        });
+
+        // KPI
+        const totalEffectif = rows.reduce((s, r) => s + r.effectif, 0);
+        const totalMontant  = rows.reduce((s, r) => s + r.montant,  0);
+        document.getElementById('kpiSites').textContent    = rows.length;
+        document.getElementById('kpiVisiteurs').textContent = totalEffectif.toLocaleString('fr-FR');
+        document.getElementById('kpiMontant').textContent  = fmtNum(totalMontant);
+
+        // Max effectif pour barres de progression
+        const maxEff = Math.max(...rows.map(r => r.effectif), 1);
+
+        // Trier par montant DESC pour attribuer le rang
+        const rowsSorted = [...rows].sort((a, b) => b.montant - a.montant);
+
+        // DataTable : détruire proprement
+        if (dataTable !== null) {
+            dataTable.destroy();
+            dataTable = null;
+        }
+        document.getElementById('statsTableBody').innerHTML = '';
+
+        rowsSorted.forEach((r, idx) => {
+            const rang     = idx + 1;
+            const pct      = Math.round((r.effectif / maxEff) * 100);
+            const isTop    = rang === 1;
+            const rangCls  = rang === 1 ? 'rang-1' : rang === 2 ? 'rang-2' : rang === 3 ? 'rang-3' : 'rang-n';
+            const mBadgeCls= isTop ? 'montant-badge montant-top' : 'montant-badge';
+
+            document.getElementById('statsTableBody').innerHTML += `
+                <tr>
+                    <td>
+                        <span class="rang-badge ${rangCls}">${rang}</span>
+                    </td>
+                    <td>
+                        <span class="font-semibold text-gray-900">${r.site.nameSite}</span>
+                    </td>
+                    <td class="text-gray-500 text-sm">${r.site.lieuSite || '—'}</td>
+                    <td style="text-align:right" class="text-gray-700 text-sm">
+                        ${fmtNum(r.site.tarifJournalier)} Ar/j
+                    </td>
+                    <td style="text-align:right">
+                        <div>
+                            <span class="font-bold text-indigo-600 text-base">${r.effectif}</span>
+                            <span class="text-xs text-gray-400 ml-1">visiteur${r.effectif > 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="effectif-bar" style="width:80px;margin-left:auto">
+                            <div class="effectif-fill" style="width:${pct}%"></div>
+                        </div>
+                    </td>
+                    <td style="text-align:right" class="text-gray-700">
+                        ${r.totalJours} j
+                    </td>
+                    <td style="text-align:right">
+                        <span class="${mBadgeCls}">${fmtNum(r.montant)} Ar</span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        // Tfoot totaux
+        const totalJours = rows.reduce((s, r) => s + r.totalJours, 0);
+        document.getElementById('tfEffectif').textContent = totalEffectif.toLocaleString('fr-FR');
+        document.getElementById('tfJours').textContent    = totalJours + ' j';
+        document.getElementById('tfMontant').textContent  = fmtNum(totalMontant) + ' Ar';
+
+        // Initialiser DataTable
+        dataTable = $('#statsTable').DataTable({
+            paging   : true,
+            pageLength: 10,
+            searching: true,
+            info     : true,
+            ordering : true,
+            order    : [[6, 'desc']], // tri par montant DESC par défaut
+            language : {
+                search      : 'Rechercher :',
+                lengthMenu  : 'Afficher _MENU_ lignes',
+                paginate    : { previous: '‹ Précédent', next: 'Suivant ›' },
+                info        : 'Sites _START_ à _END_ sur _TOTAL_',
+                infoEmpty   : 'Aucun site',
+                zeroRecords : 'Aucun site trouvé'
+            },
+            columnDefs: [
+                { orderable: false, targets: [0, 4] }, // rang & effectif (barre svg)
+                { targets: [3, 5, 6], type: 'num' }
+            ]
+        });
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  UTILITAIRES
+    // ═══════════════════════════════════════════════════
+    function fmtNum(n) {
+        return new Intl.NumberFormat('fr-FR').format(Math.round(n));
+    }
+    function fmtDate(str) {
+        if (!str) return '—';
+        const d = new Date(str);
+        return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    }
+    </script>
+
+</body>
+</html>
