@@ -6,6 +6,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de bord - Tourisme</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary:   #0f172a;
+            --accent:    #6366f1;
+            --accent2:   #f59e0b;
+            --success:   #10b981;
+            --border:    #e2e8f0;
+            --text:      #1e293b;
+            --muted:     #64748b;
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 16px;
+            padding: 22px 24px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.08); }
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+        }
+        .kpi-card.indigo::before  { background: var(--accent); }
+        .kpi-card.amber::before   { background: var(--accent2); }
+        .kpi-card.emerald::before { background: var(--success); }
+
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 900;
+            line-height: 1;
+            color: var(--text);
+        }
+        .kpi-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+        .kpi-icon {
+            font-size: 2.5rem;
+            opacity: .15;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.1);
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     
@@ -18,12 +80,155 @@
         <!-- En-tête de page -->
         <header class="mb-10">
             <h1 class="text-2xl font-bold text-gray-800">Tableau de bord</h1>
-            <p class="text-gray-500">Bienvenue dans votre espace de gestion des sites.</p>
+            <p class="text-gray-500">Résumé global de votre gestion des sites touristiques.</p>
         </header>
 
-        
+        <!-- ══════════════════ CARTES KPI ══════════════════ -->
+        <div class="grid grid-cols-3 gap-6 mb-10">
+            <!-- Total Sites -->
+            <div class="kpi-card indigo">
+                <div class="kpi-icon">🏛️</div>
+                <div class="kpi-value" id="totalSites">0</div>
+                <div class="kpi-label">Sites Totaux</div>
+            </div>
+
+            <!-- Total Visiteurs -->
+            <div class="kpi-card amber">
+                <div class="kpi-icon">👥</div>
+                <div class="kpi-value" id="totalVisiteurs">0</div>
+                <div class="kpi-label">Visiteurs Totaux</div>
+            </div>
+
+            <!-- Total Visites -->
+            <div class="kpi-card emerald">
+                <div class="kpi-icon">📍</div>
+                <div class="kpi-value" id="totalVisites">0</div>
+                <div class="kpi-label">Visites Totales</div>
+            </div>
+        </div>
+
+        <!-- ══════════════════ HISTOGRAMME ══════════════════ -->
+        <div class="chart-container">
+            <h2 class="text-lg font-bold text-gray-800 mb-6">Visites par Site</h2>
+            <div style="position: relative; height: 400px;">
+                <canvas id="visiteChart"></canvas>
+            </div>
+        </div>
 
     </main>
+
+    <script th:inline="none">
+        let chart = null;
+
+        // Charger les données au chargement de la page
+        document.addEventListener('DOMContentLoaded', () => {
+            chargerDonnees();
+        });
+
+        // Charger les données depuis les API
+        function chargerDonnees() {
+            Promise.all([
+                fetch('/api/sites').then(r => r.json()),
+                fetch('/api/visiteurs').then(r => r.json()),
+                fetch('/api/visites').then(r => r.json())
+            ])
+            .then(([sites, visiteurs, visites]) => {
+                // Mettre à jour les KPI
+                document.getElementById('totalSites').textContent = sites.length;
+                document.getElementById('totalVisiteurs').textContent = visiteurs.length;
+                document.getElementById('totalVisites').textContent = visites.length;
+
+                // Créer l'histogramme
+                creerHistogramme(sites, visites);
+            })
+            .catch(err => {
+                console.error('Erreur chargement données:', err);
+                document.getElementById('totalSites').textContent = '—';
+                document.getElementById('totalVisiteurs').textContent = '—';
+                document.getElementById('totalVisites').textContent = '—';
+            });
+        }
+
+        // Créer l'histogramme des visites par site
+        function creerHistogramme(sites, visites) {
+            // Compter les visites par site
+            const visitesParSite = {};
+            sites.forEach(s => {
+                visitesParSite[s.siteId] = {
+                    nom: s.nameSite,
+                    count: 0
+                };
+            });
+
+            visites.forEach(v => {
+                if (v.site && visitesParSite[v.site.siteId]) {
+                    visitesParSite[v.site.siteId].count++;
+                }
+            });
+
+            // Préparer les données pour Chart.js
+            const labels = Object.values(visitesParSite).map(s => s.nom);
+            const data = Object.values(visitesParSite).map(s => s.count);
+
+            // Détruire le graphique existant si présent
+            if (chart) {
+                chart.destroy();
+            }
+
+            // Créer le nouveau graphique
+            const ctx = document.getElementById('visiteChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Nombre de visites',
+                        data: data,
+                        backgroundColor: '#6366f1',
+                        borderColor: '#4f46e5',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        hoverBackgroundColor: '#4f46e5'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 12 },
+                                color: '#64748b',
+                                padding: 15
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#64748b'
+                            },
+                            grid: {
+                                color: '#f1f5f9'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#64748b'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
 
 </body>
 </html>
