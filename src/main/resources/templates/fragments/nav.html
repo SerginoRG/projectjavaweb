@@ -4,6 +4,12 @@
         <span class="font-bold text-xl text-gray-800">TOURIST<span class="text-red-500">GUEST</span></span>
     </div>
     
+    <!-- Section utilisateur connecté -->
+    <div th:if="${user}" class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+        <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Connecté en tant que</p>
+        <p class="text-sm font-semibold text-gray-800 mt-1 truncate" th:text="${user.email}"></p>
+    </div>
+    
     <nav class="flex-1 p-4 space-y-2 mt-4">
         <a href="/home" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 text-red-600 font-bold transition-all">
             <span>Accueil</span>
