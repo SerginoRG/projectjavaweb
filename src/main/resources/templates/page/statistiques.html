@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
 
     <style>
@@ -264,10 +265,14 @@
                     <p class="text-gray-500 mt-1 text-sm">Effectif et montant total des visites par site.</p>
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="window.print()"
+                    <button onclick="exporterPDF()"
+                            class="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition shadow">
+                        📄 Exporter PDF
+                    </button>
+                    <!-- <button onclick="window.print()"
                             class="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-semibold text-sm transition shadow">
                         🖨️ Imprimer
-                    </button>
+                    </button> -->
                 </div>
             </div>
         </header>
@@ -637,6 +642,80 @@
         if (!str) return '—';
         const d = new Date(str);
         return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  EXPORT PDF
+    // ═══════════════════════════════════════════════════
+    function exporterPDF() {
+        const labelPeriode = document.getElementById('labelPeriode').textContent;
+        
+        // Récupérer les données du tableau
+        const rows = [];
+        document.querySelectorAll('#statsTable tbody tr').forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            const siteName = cells[0].textContent.trim();
+            
+            // Extraire l'effectif (nombre avant "visiteur")
+            const effectifText = cells[1].textContent;
+            const effectif = effectifText.split('visiteur')[0].trim();
+            
+            // Extraire le montant (nombre avant "Ar")
+            const montantText = cells[2].textContent;
+            const montant = montantText.split('Ar')[0].trim();
+            
+            rows.push({
+                site: siteName,
+                effectif: effectif,
+                montant: montant
+            });
+        });
+
+        // Créer le contenu HTML du PDF (format simple comme l'image)
+        let htmlContent = `
+            <div style="font-family: Arial, sans-serif; padding: 15px;">
+                <h2 style="font-size: 14px; font-weight: bold; margin: 0 0 5px 0;">
+                    Effectif et montant total des visites par site
+                </h2>
+                <p style="font-size: 11px; color: #333; margin: 0 0 20px 0;">
+                    <strong>ANNÉE:</strong> ${labelPeriode}
+                </p>
+                
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 6px; font-weight: bold; background: #f5f5f5;">SITE</td>
+                        <td style="border: 1px solid #000; padding: 6px; font-weight: bold; background: #f5f5f5; text-align: right;">EFFECTIF</td>
+                        <td style="border: 1px solid #000; padding: 6px; font-weight: bold; background: #f5f5f5; text-align: right;">TOTAL</td>
+                    </tr>
+        `;
+
+        // Ajouter les lignes de données
+        rows.forEach(row => {
+            htmlContent += `
+                    <tr>
+                        <td style="border: 1px solid #ccc; padding: 6px;">${row.site}</td>
+                        <td style="border: 1px solid #ccc; padding: 6px; text-align: right;">${row.effectif}</td>
+                        <td style="border: 1px solid #ccc; padding: 6px; text-align: right;">${row.montant}</td>
+                    </tr>
+            `;
+        });
+
+        htmlContent += `
+                </table>
+            </div>
+        `;
+
+        // Options pour html2pdf
+        const options = {
+            margin: [10, 10, 10, 10],
+            filename: `statistiques_visites_${new Date().getTime()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+        };
+
+        // Générer le PDF
+        html2pdf().set(options).from(htmlContent).save();
     }
     </script>
 

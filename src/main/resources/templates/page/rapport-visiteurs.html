@@ -104,9 +104,119 @@
         /* ---- Print styles ---- */
         @media print {
             .no-print { display: none !important; }
-            body { background: white; }
-            main { margin-left: 0 !important; }
-            .print-shadow { box-shadow: none !important; border: 1px solid #ccc !important; }
+            body { 
+                background: white !important;
+                margin: 0 !important;
+                padding: 10mm !important;
+            }
+            main { 
+                margin-left: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+            .print-shadow { 
+                box-shadow: none !important; 
+                border: 1px solid #333 !important; 
+                page-break-inside: avoid !important;
+            }
+            
+            /* En-tête et contenu rapport */
+            #zoneResultat {
+                display: block !important;
+            }
+            .anim-in {
+                animation: none !important;
+            }
+            
+            /* Tableau */
+            #rapportTable {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                page-break-inside: avoid !important;
+            }
+            #rapportTable thead tr {
+                background: #2d3748 !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            #rapportTable thead th {
+                background: #2d3748 !important;
+                color: white !important;
+                padding: 10px !important;
+                border: 1px solid #2d3748 !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            #rapportTable tbody tr {
+                page-break-inside: avoid !important;
+            }
+            #rapportTable tbody td {
+                padding: 8px !important;
+                border: 1px solid #e2e8f0 !important;
+            }
+            #rapportTable tbody tr:hover {
+                background: white !important;
+            }
+            
+            /* Ligne totale */
+            .total-row {
+                background: #2d3748 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            .total-row td {
+                background: #2d3748 !important;
+                color: white !important;
+                font-weight: bold !important;
+            }
+            
+            /* Badges */
+            .badge-montant {
+                background: #f0f0f0 !important;
+                color: #d32f2f !important;
+                padding: 2px 8px !important;
+                border: 1px solid #d32f2f !important;
+            }
+            .badge-total {
+                background: #e8b74e !important;
+                color: #1a1a2e !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            /* Gradient en-tête */
+            .bg-gradient-to-r {
+                background: #1a1a2e !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            /* Texte et conteneur */
+            .bg-white {
+                background: white !important;
+            }
+            .bg-gray-50 {
+                background: white !important;
+            }
+            .text-white {
+                color: white !important;
+            }
+            
+            /* Sections */
+            section, div {
+                page-break-inside: avoid !important;
+            }
+            
+            /* Marges et espaces */
+            .p-8, .p-6 { padding: 0 !important; }
+            .mb-8, .mb-5 { margin-bottom: 5px !important; }
+            .rounded-2xl { border-radius: 0 !important; }
+            
+            /* Bordures */
+            .border, .border-gray-100 {
+                border: 1px solid #666 !important;
+            }
         }
 
         /* ---- Animations ---- */
@@ -124,6 +234,13 @@
             border-radius: 2px;
             vertical-align: middle;
             margin: 0 10px;
+        }
+
+        /* Hide sidebar on print */
+        @media print {
+            aside {
+                display: none !important;
+            }
         }
     </style>
 </head>
